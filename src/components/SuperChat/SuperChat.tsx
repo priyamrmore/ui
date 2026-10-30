@@ -205,14 +205,15 @@ export type SuperChatComposerProps = Omit<
 >;
 
 /**
- * Phone-sized screens, upright (narrow) or sideways (short): the media view
- * covers the screen there. One media query each, so both apply as a pair.
+ * Phone-sized screens, upright (narrow) or sideways (short — a short laptop
+ * window too): the media view covers the screen there. One media query each,
+ * so both apply as a pair. MediaFeed lays a short screen out sideways.
  */
 const PHONE_FULLSCREEN = [
   'max-sm:fixed max-sm:inset-0 max-sm:z-50',
   'max-sm:pt-[env(safe-area-inset-top)] max-sm:pr-[env(safe-area-inset-right)] max-sm:pb-[env(safe-area-inset-bottom)] max-sm:pl-[env(safe-area-inset-left)]',
-  '[@media(max-height:32rem)]:fixed [@media(max-height:32rem)]:inset-0 [@media(max-height:32rem)]:z-50',
-  '[@media(max-height:32rem)]:pt-[env(safe-area-inset-top)] [@media(max-height:32rem)]:pr-[env(safe-area-inset-right)] [@media(max-height:32rem)]:pb-[env(safe-area-inset-bottom)] [@media(max-height:32rem)]:pl-[env(safe-area-inset-left)]',
+  '[@media(max-height:40rem)]:fixed [@media(max-height:40rem)]:inset-0 [@media(max-height:40rem)]:z-50',
+  '[@media(max-height:40rem)]:pt-[env(safe-area-inset-top)] [@media(max-height:40rem)]:pr-[env(safe-area-inset-right)] [@media(max-height:40rem)]:pb-[env(safe-area-inset-bottom)] [@media(max-height:40rem)]:pl-[env(safe-area-inset-left)]',
 ].join(' ');
 
 /**

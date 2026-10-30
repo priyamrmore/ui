@@ -30,7 +30,10 @@ const defaultLabels: MediaFeedLabels = {
 
 /** Previous/Next on the dark feed: thumb-sized on a phone. */
 const NAV_BUTTON_CLASS =
-  'h-auto min-h-10 flex-1 py-2 text-white/80 hover:bg-white/10 hover:text-white sm:min-h-8 [&_[data-slot=button-label]]:whitespace-normal';
+  'h-auto min-h-10 flex-1 py-2 text-white/80 hover:bg-white/10 hover:text-white sm:min-h-8 [@media(max-height:40rem)]:min-h-10 [@media(max-height:40rem)]:flex-none [&_[data-slot=button-label]]:whitespace-normal';
+
+/** A nav label shown in a wide, tall feed; icons alone on a phone or a short screen. */
+const NAV_LABEL_CLASS = 'max-sm:sr-only [@media(max-height:40rem)]:sr-only';
 
 /**
  * A vertical, caller-owned media collection with one active playback surface.
@@ -357,7 +360,9 @@ function MediaFeedInner<T>(
         // A dark stage in every theme, as video surfaces are: the clip fills
         // it edge to edge at its own shape, portrait or landscape.
         className={cn(
-          'focus-visible:ring-ring flex h-full min-h-0 w-full snap-start snap-always flex-col overflow-hidden bg-neutral-950 text-white focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
+          // A short screen (a phone on its side) puts the details beside the
+          // clip, so it keeps the screen's height.
+          'focus-visible:ring-ring flex h-full min-h-0 w-full snap-start snap-always flex-col overflow-hidden bg-neutral-950 text-white focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset [@media(max-height:40rem)]:flex-row',
           immersive ? 'flex-1' : 'shrink-0',
           classNames.item
         )}
@@ -397,7 +402,7 @@ function MediaFeedInner<T>(
         <div
           data-slot="details"
           className={cn(
-            'flex max-h-[35%] shrink-0 flex-col gap-1 overflow-y-auto px-4 py-3',
+            'flex max-h-[35%] shrink-0 flex-col gap-1 overflow-y-auto px-4 py-3 [@media(max-height:40rem)]:max-h-full [@media(max-height:40rem)]:w-[min(16rem,35%)] [@media(max-height:40rem)]:justify-end',
             classNames.details
           )}
         >
@@ -482,7 +487,8 @@ function MediaFeedInner<T>(
     <div
       data-slot="controls"
       className={cn(
-        'flex shrink-0 items-center justify-between gap-3 py-1',
+        // Beside the feed on a short screen, stacked as the feed scrolls.
+        'flex shrink-0 items-center justify-between gap-3 py-1 [@media(max-height:40rem)]:flex-col [@media(max-height:40rem)]:justify-center [@media(max-height:40rem)]:gap-1 [@media(max-height:40rem)]:px-1',
         classNames.controls
       )}
     >
@@ -497,7 +503,7 @@ function MediaFeedInner<T>(
         onClick={() => navigate(activeIndex - 1)}
         leftIcon={<ChevronUp className="h-4 w-4" aria-hidden="true" />}
       >
-        <span className="max-sm:sr-only">{labels.previous}</span>
+        <span className={NAV_LABEL_CLASS}>{labels.previous}</span>
       </Button>
       <span
         role="status"
@@ -515,7 +521,7 @@ function MediaFeedInner<T>(
         onClick={() => navigate(activeIndex + 1)}
         rightIcon={<ChevronDown className="h-4 w-4" aria-hidden="true" />}
       >
-        <span className="max-sm:sr-only">{labels.next}</span>
+        <span className={NAV_LABEL_CLASS}>{labels.next}</span>
       </Button>
     </div>
   );
@@ -526,7 +532,7 @@ function MediaFeedInner<T>(
       data-slot="root"
       data-component="media-feed"
       className={cn(
-        'flex h-[min(48rem,80dvh)] min-h-0 w-full flex-col bg-neutral-950 text-white',
+        'flex h-[min(48rem,80dvh)] min-h-0 w-full flex-col bg-neutral-950 text-white [@media(max-height:40rem)]:flex-row',
         classNames.root,
         className
       )}
@@ -606,7 +612,7 @@ function MediaFeedInner<T>(
           tabIndex={0}
           onKeyDown={handleKeyDown}
           className={cn(
-            'flex min-h-0 flex-1 flex-col px-2 pb-2 sm:px-4',
+            'flex min-h-0 flex-1 flex-col px-2 pb-2 sm:px-4 [@media(max-height:40rem)]:flex-row',
             classNames.fullscreen
           )}
         >
