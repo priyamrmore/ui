@@ -362,8 +362,9 @@ function MediaFeedInner<T>(
         // it edge to edge at its own shape, portrait or landscape.
         className={cn(
           // A short screen (a phone on its side) puts the details beside the
-          // clip, so it keeps the screen's height.
-          'focus-visible:ring-ring flex h-full min-h-0 w-full snap-start snap-always flex-col overflow-hidden bg-neutral-950 text-white focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset [@media(max-height:40rem)_and_(orientation:landscape)]:flex-row',
+          // clip, so it keeps the screen's height. Focus is an outline: it
+          // draws over the stage, where an inset ring hides behind it.
+          'flex h-full min-h-0 w-full snap-start snap-always flex-col overflow-hidden bg-neutral-950 text-white focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white/70 [@media(max-height:40rem)_and_(orientation:landscape)]:flex-row',
           immersive ? 'flex-1' : 'shrink-0',
           classNames.item
         )}
