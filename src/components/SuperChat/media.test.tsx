@@ -6,6 +6,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SuperChat } from './SuperChat';
@@ -333,6 +334,47 @@ describe('SuperChat media view', () => {
     expect(
       screen.getByRole('button', { name: 'Host card Second clip' })
     ).toHaveFocus();
+  });
+
+  it('offers no immersive viewer in the media view unless the host asks, and shows actions beside the title', async () => {
+    mockNativePlayback();
+    const user = userEvent.setup();
+    const { unmount } = render(
+      <SuperChat
+        conversation={videoConversation}
+        mediaFeedProps={{
+          autoPlay: false,
+          renderActions: (item) => (
+            <button type="button">{`Menu ${item.attachment.title}`}</button>
+          ),
+        }}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: 'Play Second clip' }));
+    expect(
+      screen.queryByRole('button', { name: 'Open fullscreen' })
+    ).toBeNull();
+    const item = screen.getByRole('article', { name: 'Second clip' });
+    const title = within(item).getByRole('heading', { name: 'Second clip' });
+    const actions = within(item).getByRole('button', {
+      name: 'Menu Second clip',
+    });
+    // The same row as the title, not a row of its own under the caption.
+    expect(title.parentElement?.parentElement).toBe(
+      actions.closest('[data-slot="actions"]')?.parentElement?.parentElement
+    );
+    unmount();
+
+    render(
+      <SuperChat
+        conversation={videoConversation}
+        mediaFeedProps={{ autoPlay: false, allowFullscreen: true }}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: 'Play Second clip' }));
+    expect(
+      screen.getAllByRole('button', { name: 'Open fullscreen' }).length
+    ).toBeGreaterThan(0);
   });
 
   it('changing an uncontrolled conversation returns to its thread without playing a new feed', async () => {

@@ -80,8 +80,15 @@ export interface MediaFeedProps<T> extends Omit<
   getTitle?: (item: T) => string;
   getCaption?: (item: T) => React.ReactNode;
   getAuthor?: (item: T) => MediaFeedAuthor;
-  /** Host-owned actions, such as reactions or opening a conversation. */
+  /** Host-owned actions, such as reactions or opening a conversation; shown
+   * beside the item's title. */
   renderActions?: (item: T) => React.ReactNode;
+  /**
+   * Offer the immersive viewer (an expand button on each item; default true).
+   * Turn it off where the feed already fills the screen, or where the native
+   * player's own fullscreen is enough.
+   */
+  allowFullscreen?: boolean;
   /** Replace the built-in player, respecting its active playback boundary. */
   renderMedia?: (
     media: MediaFeedMedia,

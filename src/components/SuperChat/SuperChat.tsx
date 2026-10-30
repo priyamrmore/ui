@@ -948,6 +948,10 @@ export function SuperChat({
           </div>
           <MediaFeed
             {...mediaFeedProps}
+            // The media view is already the full view (the whole screen on a
+            // phone), and the player's own controls go fullscreen: no third,
+            // immersive one unless the host asks for it.
+            allowFullscreen={mediaFeedProps?.allowFullscreen ?? false}
             ref={mediaFeedRef}
             key={conversation.id}
             items={mediaItems}

@@ -51,6 +51,7 @@ function MediaFeedInner<T>(
     getAuthor,
     renderActions,
     renderMedia,
+    allowFullscreen = true,
     activeItemId,
     defaultActiveItemId,
     onActiveItemChange,
@@ -441,21 +442,36 @@ function MediaFeedInner<T>(
                 </h3>
               )}
             </div>
-            {!immersive && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="shrink-0 text-white/80 hover:bg-white/10 hover:text-white"
-                aria-label={labels.fullscreen}
-                title={labels.fullscreen}
-                onClick={(event) => {
-                  fullscreenTriggerRef.current = event.currentTarget;
-                  select(id);
-                  setFullscreen(true);
-                }}
-              >
-                <Maximize2 className="h-4 w-4" aria-hidden="true" />
-              </Button>
+            {(renderActions || (allowFullscreen && !immersive)) && (
+              <div className="flex shrink-0 items-center gap-1">
+                {renderActions && (
+                  <div
+                    data-slot="actions"
+                    className={cn(
+                      'flex flex-wrap items-center justify-end gap-2',
+                      classNames.actions
+                    )}
+                  >
+                    {renderActions(item)}
+                  </div>
+                )}
+                {allowFullscreen && !immersive && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0 text-white/80 hover:bg-white/10 hover:text-white"
+                    aria-label={labels.fullscreen}
+                    title={labels.fullscreen}
+                    onClick={(event) => {
+                      fullscreenTriggerRef.current = event.currentTarget;
+                      select(id);
+                      setFullscreen(true);
+                    }}
+                  >
+                    <Maximize2 className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                )}
+              </div>
             )}
           </div>
           {caption != null && (
@@ -467,17 +483,6 @@ function MediaFeedInner<T>(
               )}
             >
               {caption}
-            </div>
-          )}
-          {renderActions && (
-            <div
-              data-slot="actions"
-              className={cn(
-                'flex flex-wrap items-center gap-2',
-                classNames.actions
-              )}
-            >
-              {renderActions(item)}
             </div>
           )}
         </div>
@@ -595,7 +600,9 @@ function MediaFeedInner<T>(
         </>
       )}
       <Modal
-        open={fullscreen && !loading && !error && !!items.length}
+        open={
+          allowFullscreen && fullscreen && !loading && !error && !!items.length
+        }
         onOpenChange={setFullscreen}
         size="full"
         className="h-dvh min-h-0 sm:h-[calc(100dvh-2rem)]"
