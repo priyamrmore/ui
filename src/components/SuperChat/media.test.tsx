@@ -292,6 +292,49 @@ describe('SuperChat media view', () => {
     ).toBe('/clip-two.webm');
   });
 
+  it("renders the host's card for an attachment, whose open plays it in the media view and gets focus back", async () => {
+    const play = mockNativePlayback();
+    const user = userEvent.setup();
+    const { container } = render(
+      <SuperChat
+        conversation={videoConversation}
+        mediaFeedProps={{ autoPlay: false }}
+        renderMessageMedia={({ attachment, open, launchId }) =>
+          attachment.id === 'video-2' ? (
+            <button
+              type="button"
+              data-media-launch-id={launchId}
+              onClick={() => open?.(true)}
+            >
+              {`Host card ${attachment.title}`}
+            </button>
+          ) : null
+        }
+      />
+    );
+    // The host's card replaces the built-in one; `null` keeps the built-in card.
+    expect(
+      screen.getByRole('button', { name: 'Play First clip' })
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: 'Play Second clip' })
+    ).toBeNull();
+    expect(container.querySelectorAll('video')).toHaveLength(1);
+    await user.click(
+      screen.getByRole('button', { name: 'Host card Second clip' })
+    );
+    await waitFor(() => expect(play).toHaveBeenCalledTimes(1));
+    expect(
+      (play.mock.contexts[0] as HTMLMediaElement).getAttribute('src')
+    ).toBe('/clip-two.webm');
+    await user.click(
+      screen.getByRole('button', { name: 'Back to conversation' })
+    );
+    expect(
+      screen.getByRole('button', { name: 'Host card Second clip' })
+    ).toHaveFocus();
+  });
+
   it('changing an uncontrolled conversation returns to its thread without playing a new feed', async () => {
     const play = mockNativePlayback();
     const user = userEvent.setup();

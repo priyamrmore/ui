@@ -22,6 +22,7 @@ import type {
   SuperChatLinkBuilder,
   SuperChatMessage,
   SuperChatRef,
+  SuperChatRenderMessageMedia,
 } from './types';
 
 export interface VirtualThreadProps {
@@ -53,6 +54,8 @@ export interface VirtualThreadProps {
   /** Localized preview load-error/retry text, forwarded to each row. */
   mediaErrorLabel?: string;
   mediaRetryLabel?: string;
+  /** The host's card for an attachment, forwarded to each row. */
+  renderMessageMedia?: SuperChatRenderMessageMedia;
   /** Prefix of a scheduled message's indicator, forwarded to each row. */
   scheduledLabel?: string;
   /**
@@ -83,6 +86,7 @@ export function VirtualThread({
   playMediaLabel,
   mediaErrorLabel,
   mediaRetryLabel,
+  renderMessageMedia,
   scheduledLabel,
   scrollRef,
   contentRef,
@@ -146,6 +150,7 @@ export function VirtualThread({
                   playMediaLabel={playMediaLabel}
                   mediaErrorLabel={mediaErrorLabel}
                   mediaRetryLabel={mediaRetryLabel}
+                  renderMessageMedia={renderMessageMedia}
                   scheduledLabel={scheduledLabel}
                 />
               </div>

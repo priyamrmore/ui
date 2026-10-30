@@ -56,6 +56,7 @@ import type {
   SuperChatMediaFeedProps,
   SuperChatMediaItem,
   SuperChatMediaLabels,
+  SuperChatRenderMessageMedia,
   SuperChatMessageLabels,
   SuperChatView,
   SuperChatRef,
@@ -82,6 +83,11 @@ export interface SuperChatProps {
   mediaFeedProps?: SuperChatMediaFeedProps;
   /** Labels for media launches and returning to the conversation. */
   mediaLabels?: Partial<SuperChatMediaLabels>;
+  /**
+   * Renders an attachment in the thread in place of the built-in card, e.g. the
+   * host's own video card. Its `open` opens the media view at that attachment.
+   */
+  renderMessageMedia?: SuperChatRenderMessageMedia;
   /** Labels for per-message states, e.g. a scheduled message's indicator. */
   messageLabels?: Partial<SuperChatMessageLabels>;
   /** The participant id representing the local user (alignment + compose). */
@@ -209,6 +215,7 @@ export function SuperChat({
   onViewChange,
   mediaFeedProps,
   mediaLabels,
+  renderMessageMedia,
   messageLabels,
   currentParticipantId,
   renderPlugins,
@@ -717,6 +724,7 @@ export function SuperChat({
       playMediaLabel={labels.playMedia}
       mediaErrorLabel={mediaFeedProps?.labels?.mediaError}
       mediaRetryLabel={mediaFeedProps?.labels?.retry}
+      renderMessageMedia={renderMessageMedia}
       scheduledLabel={scheduledLabel}
     />
   );
@@ -954,6 +962,7 @@ export function SuperChat({
               playMediaLabel={labels.playMedia}
               mediaErrorLabel={mediaFeedProps?.labels?.mediaError}
               mediaRetryLabel={mediaFeedProps?.labels?.retry}
+              renderMessageMedia={renderMessageMedia}
               scheduledLabel={scheduledLabel}
               scrollRef={threadRef}
               contentRef={threadContentRef}
