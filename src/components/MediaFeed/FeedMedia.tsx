@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Pause, Play } from 'lucide-react';
+import { Play } from 'lucide-react';
 import { Button } from '../Button';
 import { MediaPlayer, type MediaPlayerState } from '../MediaPlayer';
 import type { MediaFeedLabels, MediaFeedMedia } from './types';
@@ -171,8 +171,11 @@ function NativeFeedMedia({
     }
   };
 
+  // Upright or sideways, the clip fills the stage at its own shape. The play
+  // control sits over it until it plays (a manual start when autoplay is off
+  // or blocked); pausing is the player's own controls.
   return (
-    <div className="flex h-full min-h-0 w-full flex-col items-center justify-center gap-3">
+    <div className="relative flex h-full min-h-0 w-full flex-col items-center justify-center">
       <MediaPlayer
         src={media.src}
         kind={media.kind === 'audio' ? 'audio' : 'video'}
@@ -207,29 +210,30 @@ function NativeFeedMedia({
         labels={{ error: labels.mediaError, retry: labels.retry }}
         className="min-h-0 flex-1 [&_video]:h-full [&_video]:w-full"
       />
-      {state !== 'error' && (
-        <Button
-          variant="secondary"
-          size="sm"
-          leftIcon={
-            state === 'playing' ? (
-              <Pause className="h-4 w-4" aria-hidden="true" />
-            ) : (
-              <Play className="h-4 w-4" aria-hidden="true" />
-            )
-          }
-          onClick={togglePlayback}
-        >
-          {state === 'playing' ? labels.pause : labels.play}
-        </Button>
-      )}
-      {blocked && (
-        <p
-          role="status"
-          className="text-muted-foreground m-0 text-center text-sm"
-        >
-          {labels.blockedAutoplay}
-        </p>
+      {state !== 'error' && state !== 'playing' && (
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 p-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={labels.play}
+            title={labels.play}
+            className="pointer-events-auto h-14 w-14 rounded-full bg-black/60 text-white hover:bg-black/75 hover:text-white focus-visible:ring-2 focus-visible:ring-white"
+            onClick={togglePlayback}
+          >
+            <Play
+              className="h-6 w-6 translate-x-0.5 fill-current"
+              aria-hidden="true"
+            />
+          </Button>
+          {blocked && (
+            <p
+              role="status"
+              className="m-0 rounded bg-black/60 px-2 py-1 text-center text-sm text-white"
+            >
+              {labels.blockedAutoplay}
+            </p>
+          )}
+        </div>
       )}
       {state === 'error' && <SourceLink src={media.src} labels={labels} />}
     </div>

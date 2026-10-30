@@ -28,6 +28,10 @@ const defaultLabels: MediaFeedLabels = {
   position: (position, total) => `${position} / ${total}`,
 };
 
+/** Previous/Next on the dark feed: thumb-sized on a phone. */
+const NAV_BUTTON_CLASS =
+  'h-auto min-h-10 flex-1 py-2 text-white/80 hover:bg-white/10 hover:text-white sm:min-h-8 [&_[data-slot=button-label]]:whitespace-normal';
+
 /**
  * A vertical, caller-owned media collection with one active playback surface.
  * Native players share MediaPlayer; provider-specific players can use the
@@ -310,7 +314,10 @@ function MediaFeedInner<T>(
       playbackPosition = { src: media.src, timeMs: 0 };
       playbackPositions.current.set(id, playbackPosition);
     }
-    const title = getTitle?.(item) || labels.item(index + 1, items.length);
+    // The position names an untitled item for assistive tech; on screen the
+    // counter already says it, so only a real title is shown.
+    const ownTitle = getTitle?.(item);
+    const title = ownTitle || labels.item(index + 1, items.length);
     const author = getAuthor?.(item);
     const caption = getCaption?.(item);
     const active =
@@ -347,16 +354,18 @@ function MediaFeedInner<T>(
         aria-posinset={index + 1}
         aria-setsize={items.length}
         tabIndex={id === activeId ? 0 : -1}
+        // A dark stage in every theme, as video surfaces are: the clip fills
+        // it edge to edge at its own shape, portrait or landscape.
         className={cn(
-          'border-border bg-card text-card-foreground focus-visible:ring-ring flex min-h-0 w-full snap-start flex-col overflow-hidden border focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
-          immersive ? 'h-full flex-1 border-0' : 'h-full shrink-0 rounded-xl',
+          'focus-visible:ring-ring flex h-full min-h-0 w-full snap-start snap-always flex-col overflow-hidden bg-neutral-950 text-white focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
+          immersive ? 'flex-1' : 'shrink-0',
           classNames.item
         )}
       >
         <div
           data-slot="media"
           className={cn(
-            'bg-muted flex min-h-0 flex-1 items-center justify-center p-3',
+            'flex min-h-0 flex-1 items-center justify-center bg-black',
             classNames.media
           )}
         >
@@ -388,7 +397,7 @@ function MediaFeedInner<T>(
         <div
           data-slot="details"
           className={cn(
-            'flex max-h-[40%] shrink-0 flex-col gap-2 overflow-y-auto p-4',
+            'flex max-h-[35%] shrink-0 flex-col gap-1 overflow-y-auto px-4 py-3',
             classNames.details
           )}
         >
@@ -398,7 +407,7 @@ function MediaFeedInner<T>(
                 <div
                   data-slot="author"
                   className={cn(
-                    'mb-2 flex items-center gap-2',
+                    'mb-1 flex items-center gap-2',
                     classNames.author
                   )}
                 >
@@ -413,17 +422,23 @@ function MediaFeedInner<T>(
                   </span>
                 </div>
               )}
-              <h3
-                data-slot="title"
-                className={cn('m-0 text-base font-semibold', classNames.title)}
-              >
-                {title}
-              </h3>
+              {ownTitle && (
+                <h3
+                  data-slot="title"
+                  className={cn(
+                    'm-0 text-sm font-semibold break-words',
+                    classNames.title
+                  )}
+                >
+                  {ownTitle}
+                </h3>
+              )}
             </div>
             {!immersive && (
               <Button
                 variant="ghost"
                 size="sm"
+                className="shrink-0 text-white/80 hover:bg-white/10 hover:text-white"
                 aria-label={labels.fullscreen}
                 title={labels.fullscreen}
                 onClick={(event) => {
@@ -440,7 +455,7 @@ function MediaFeedInner<T>(
             <div
               data-slot="caption"
               className={cn(
-                'text-muted-foreground text-sm',
+                'line-clamp-3 text-sm break-words text-white/75',
                 classNames.caption
               )}
             >
@@ -467,36 +482,40 @@ function MediaFeedInner<T>(
     <div
       data-slot="controls"
       className={cn(
-        'flex shrink-0 items-center justify-between gap-3 py-2',
+        'flex shrink-0 items-center justify-between gap-3 py-1',
         classNames.controls
       )}
     >
+      {/* Icons only on a phone, where swiping is the way through; the
+          labels still name them for assistive tech. */}
       <Button
         variant="ghost"
         size="sm"
-        className="h-auto min-h-8 flex-1 py-2 [&_[data-slot=button-label]]:whitespace-normal"
+        aria-label={labels.previous}
+        className={NAV_BUTTON_CLASS}
         disabled={activeIndex <= 0}
         onClick={() => navigate(activeIndex - 1)}
         leftIcon={<ChevronUp className="h-4 w-4" aria-hidden="true" />}
       >
-        {labels.previous}
+        <span className="max-sm:sr-only">{labels.previous}</span>
       </Button>
       <span
         role="status"
         aria-live="polite"
-        className="text-muted-foreground shrink-0 text-sm whitespace-nowrap"
+        className="shrink-0 text-sm whitespace-nowrap text-white/70"
       >
         {labels.position(activeIndex + 1, items.length)}
       </span>
       <Button
         variant="ghost"
         size="sm"
-        className="h-auto min-h-8 flex-1 py-2 [&_[data-slot=button-label]]:whitespace-normal"
+        aria-label={labels.next}
+        className={NAV_BUTTON_CLASS}
         disabled={activeIndex >= items.length - 1}
         onClick={() => navigate(activeIndex + 1)}
         rightIcon={<ChevronDown className="h-4 w-4" aria-hidden="true" />}
       >
-        {labels.next}
+        <span className="max-sm:sr-only">{labels.next}</span>
       </Button>
     </div>
   );
@@ -507,7 +526,7 @@ function MediaFeedInner<T>(
       data-slot="root"
       data-component="media-feed"
       className={cn(
-        'bg-background text-foreground flex h-[min(48rem,80dvh)] min-h-0 w-full flex-col',
+        'flex h-[min(48rem,80dvh)] min-h-0 w-full flex-col bg-neutral-950 text-white',
         classNames.root,
         className
       )}
@@ -557,7 +576,7 @@ function MediaFeedInner<T>(
             tabIndex={0}
             onKeyDown={handleKeyDown}
             className={cn(
-              'focus-visible:ring-ring relative flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-4 overflow-y-auto overscroll-contain focus-visible:ring-2 focus-visible:outline-none',
+              'focus-visible:ring-ring relative flex min-h-0 flex-1 snap-y snap-mandatory flex-col overflow-y-auto overscroll-contain bg-black focus-visible:ring-2 focus-visible:outline-none',
               classNames.viewport
             )}
           >

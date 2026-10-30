@@ -205,6 +205,17 @@ export type SuperChatComposerProps = Omit<
 >;
 
 /**
+ * Phone-sized screens, upright (narrow) or sideways (short): the media view
+ * covers the screen there. One media query each, so both apply as a pair.
+ */
+const PHONE_FULLSCREEN = [
+  'max-sm:fixed max-sm:inset-0 max-sm:z-50',
+  'max-sm:pt-[env(safe-area-inset-top)] max-sm:pr-[env(safe-area-inset-right)] max-sm:pb-[env(safe-area-inset-bottom)] max-sm:pl-[env(safe-area-inset-left)]',
+  '[@media(max-height:32rem)]:fixed [@media(max-height:32rem)]:inset-0 [@media(max-height:32rem)]:z-50',
+  '[@media(max-height:32rem)]:pt-[env(safe-area-inset-top)] [@media(max-height:32rem)]:pr-[env(safe-area-inset-right)] [@media(max-height:32rem)]:pb-[env(safe-area-inset-bottom)] [@media(max-height:32rem)]:pl-[env(safe-area-inset-left)]',
+].join(' ');
+
+/**
  * Single-conversation chat panel. See the module `MAINTAINERS.md` for the
  * participant model and render-plugin architecture.
  */
@@ -434,16 +445,29 @@ export function SuperChat({
     const launchId = source
       ? JSON.stringify([source.messageId, source.attachmentId])
       : undefined;
-    const launcher =
+    const findLauncher = () =>
       source?.conversationId === conversation.id
         ? Array.from(
-            threadRef.current?.querySelectorAll<HTMLButtonElement>(
+            threadRef.current?.querySelectorAll<HTMLElement>(
               '[data-media-launch-id]'
             ) ?? []
           ).find((button) => button.dataset.mediaLaunchId === launchId)
         : undefined;
-    (launcher ?? threadRef.current)?.focus({ preventScroll: true });
-  }, [activeView, conversation.id, threadRef]);
+    // A virtualized thread mounts its rows a frame or two after the thread
+    // itself, so look again for a few frames before settling on the thread.
+    let frame = 0;
+    let framesLeft = virtualized ? 10 : 0;
+    const focusLauncher = () => {
+      const launcher = findLauncher();
+      if (!launcher && framesLeft-- > 0) {
+        frame = requestAnimationFrame(focusLauncher);
+        return;
+      }
+      (launcher ?? threadRef.current)?.focus({ preventScroll: true });
+    };
+    focusLauncher();
+    return () => cancelAnimationFrame(frame);
+  }, [activeView, conversation.id, threadRef, virtualized]);
   const [hasNewBelow, setHasNewBelow] = React.useState(false);
   // Own-send turn anchoring (ChatGPT/Claude-style): the freshly sent message
   // opens a "turn" that reserves a viewport of space, anchored so the bubble
@@ -893,14 +917,22 @@ export function SuperChat({
       {activeView === 'media' ? (
         <div
           data-slot="superchat-media-view"
-          className="flex min-h-0 flex-1 flex-col"
+          className={cn(
+            'flex min-h-0 flex-1 flex-col bg-neutral-950 text-white',
+            // Mobile first: on a phone, upright or sideways, the media view
+            // takes the whole screen, clear of the notch and home bar, so a
+            // clip of either shape gets all of it. In a larger window it
+            // stays in the conversation's place.
+            PHONE_FULLSCREEN
+          )}
         >
-          <div className="px-4 pt-2">
+          <div className="px-2 pt-1 sm:px-4 sm:pt-2">
             <ButtonGroup className="justify-start">
               <Button
                 ref={backToConversationRef}
                 variant="ghost"
                 size="sm"
+                className="min-h-10 text-white/90 hover:bg-white/10 hover:text-white sm:min-h-8"
                 leftIcon={
                   <ArrowLeft
                     className="size-4 rtl:rotate-180"
