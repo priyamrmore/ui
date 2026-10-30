@@ -443,6 +443,32 @@ describe('MediaFeed', () => {
     await waitFor(() => expect(onRetry).toHaveBeenCalledOnce());
   });
 
+  it('shows a cut-off caption in full on a tap, and leaves one that fits alone', () => {
+    // jsdom has no layout: say every clamped caption overflows.
+    vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockImplementation(
+      function (this: HTMLElement) {
+        return this.textContent?.startsWith('A long') ? 80 : 20;
+      }
+    );
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(32);
+    renderFeed({
+      getCaption: (item) =>
+        item.id === 'first'
+          ? 'A long message that runs past two lines'
+          : 'Short',
+    });
+    const first = screen.getByRole('article', { name: 'First update' });
+    const toggle = within(first).getByRole('button', {
+      name: 'A long message that runs past two lines',
+    });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const second = screen.getByRole('article', { name: 'Second update' });
+    expect(within(second).queryByRole('button', { name: 'Short' })).toBeNull();
+    expect(within(second).getByText('Short')).toBeInTheDocument();
+  });
+
   it('keeps a manual play control when autoplay is blocked', async () => {
     play.mockImplementation(() =>
       Promise.reject(
