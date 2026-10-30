@@ -44,6 +44,12 @@ export interface MediaFeedLabels {
   next: string;
   play: string;
   pause: string;
+  /** The player's own controls: mute, unmute, seek, and its full screen. */
+  mute: string;
+  unmute: string;
+  seek: string;
+  playerFullscreen: string;
+  exitPlayerFullscreen: string;
   blockedAutoplay: string;
   mediaError: string;
   openSource: string;

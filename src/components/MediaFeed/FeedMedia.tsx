@@ -171,9 +171,9 @@ function NativeFeedMedia({
     }
   };
 
-  // Upright or sideways, the clip fills the stage at its own shape. The play
-  // control sits over it until it plays (a manual start when autoplay is off
-  // or blocked); pausing is the player's own controls.
+  // Upright or sideways, the clip fills the stage at its own shape, under the
+  // player's touch-first controls (a manual start when autoplay is off or
+  // blocked, pause, seek, mute, full screen).
   return (
     <div className="relative flex h-full min-h-0 w-full flex-col items-center justify-center">
       <MediaPlayer
@@ -185,6 +185,7 @@ function NativeFeedMedia({
         poster={media.poster}
         preload={active ? 'metadata' : 'none'}
         controls={active}
+        controlsStyle="overlay"
         aria-label={title}
         onStateChange={(next) => {
           setState(next);
@@ -207,11 +208,23 @@ function NativeFeedMedia({
           setBlocked(false);
           setRetryVersion((version) => version + 1);
         }}
-        labels={{ error: labels.mediaError, retry: labels.retry }}
+        labels={{
+          error: labels.mediaError,
+          retry: labels.retry,
+          play: labels.play,
+          pause: labels.pause,
+          mute: labels.mute,
+          unmute: labels.unmute,
+          seek: labels.seek,
+          fullscreen: labels.playerFullscreen,
+          exitFullscreen: labels.exitPlayerFullscreen,
+        }}
         className="min-h-0 flex-1 [&_video]:h-full [&_video]:w-full"
       />
-      {state !== 'error' && state !== 'playing' && (
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 p-4">
+      {/* An item that isn't the active one has no controls yet: its ▶
+          selects it and starts it. */}
+      {!active && state !== 'error' && state !== 'playing' && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <Button
             variant="ghost"
             size="icon"
@@ -225,15 +238,17 @@ function NativeFeedMedia({
               aria-hidden="true"
             />
           </Button>
-          {blocked && (
-            <p
-              role="status"
-              className="m-0 rounded bg-black/60 px-2 py-1 text-center text-sm text-white"
-            >
-              {labels.blockedAutoplay}
-            </p>
-          )}
         </div>
+      )}
+      {blocked && state !== 'playing' && (
+        <p
+          role="status"
+          className="pointer-events-none absolute inset-x-0 top-3 m-0 flex justify-center px-4"
+        >
+          <span className="rounded bg-black/60 px-2 py-1 text-center text-sm text-white">
+            {labels.blockedAutoplay}
+          </span>
+        </p>
       )}
       {state === 'error' && <SourceLink src={media.src} labels={labels} />}
     </div>

@@ -382,6 +382,7 @@ const Slider = React.forwardRef<HTMLInputElement, SliderProps>(
           aria-valuemin={min}
           aria-valuemax={max}
           aria-valuenow={clampedValue}
+          aria-valuetext={formatValue ? formatValue(clampedValue) : undefined}
           aria-label={ariaLabel}
           aria-labelledby={ariaLabelledBy}
           aria-describedby={ariaDescribedBy}
