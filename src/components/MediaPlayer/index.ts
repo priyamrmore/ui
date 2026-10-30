@@ -10,6 +10,8 @@ export {
 export {
   MediaControls,
   formatMediaTime,
+  isInPictureInPicture,
+  PIP_EVENTS,
   type MediaControlsLabels,
   type MediaControlsProps,
 } from './MediaControls';

@@ -3,6 +3,7 @@ import {
   Maximize,
   Minimize,
   Pause,
+  PictureInPicture2,
   Play,
   Volume2,
   VolumeX,
@@ -21,6 +22,8 @@ export interface MediaControlsLabels {
   seek: string;
   fullscreen: string;
   exitFullscreen: string;
+  pictureInPicture: string;
+  exitPictureInPicture: string;
 }
 
 const defaultLabels: MediaControlsLabels = {
@@ -31,6 +34,8 @@ const defaultLabels: MediaControlsLabels = {
   seek: 'Seek',
   fullscreen: 'Full screen',
   exitFullscreen: 'Exit full screen',
+  pictureInPicture: 'Picture in picture',
+  exitPictureInPicture: 'Exit picture in picture',
 };
 
 export interface MediaControlsProps {
@@ -58,7 +63,55 @@ export function formatMediaTime(ms: number): string {
     : `${minutes}:${seconds}`;
 }
 
-type WebKitVideo = HTMLVideoElement & { webkitEnterFullscreen?: () => void };
+/** Safari's own full screen and picture in picture, beside the standard APIs. */
+type WebKitVideo = HTMLVideoElement & {
+  webkitEnterFullscreen?: () => void;
+  webkitSupportsPresentationMode?: (mode: string) => boolean;
+  webkitSetPresentationMode?: (mode: string) => void;
+  webkitPresentationMode?: string;
+};
+
+/** The events that say a video went into or out of picture in picture. */
+export const PIP_EVENTS = [
+  'enterpictureinpicture',
+  'leavepictureinpicture',
+  'webkitpresentationmodechanged',
+];
+
+/** Whether `video` is floating in picture in picture (either API). */
+export function isInPictureInPicture(
+  video: HTMLMediaElement | null | undefined
+): boolean {
+  if (!video || typeof document === 'undefined') return false;
+  return (
+    document.pictureInPictureElement === video ||
+    (video as WebKitVideo).webkitPresentationMode === 'picture-in-picture'
+  );
+}
+
+/** Whether this browser can float `video` in picture in picture. */
+function canPictureInPicture(video: WebKitVideo | null): boolean {
+  if (!video || typeof document === 'undefined') return false;
+  return (
+    (document.pictureInPictureEnabled && !video.disablePictureInPicture) ||
+    !!video.webkitSupportsPresentationMode?.('picture-in-picture')
+  );
+}
+
+/** Whether `video` is in picture in picture, following every change. */
+function useInPictureInPicture(video: HTMLVideoElement | null): boolean {
+  const [inPip, setInPip] = React.useState(false);
+  React.useEffect(() => {
+    if (!video) return;
+    const update = () => setInPip(isInPictureInPicture(video));
+    update();
+    for (const event of PIP_EVENTS) video.addEventListener(event, update);
+    return () => {
+      for (const event of PIP_EVENTS) video.removeEventListener(event, update);
+    };
+  }, [video]);
+  return inPip;
+}
 
 /** Whether `element`'s audio is muted, following every change to it. */
 function useMuted(element: HTMLMediaElement | null): boolean {
@@ -96,8 +149,8 @@ const barButton =
 /**
  * Touch-first controls laid over a `<video>`, in place of the browser's own:
  * a tap on the picture plays or pauses it, a round ▶ shows while it's paused,
- * and a bar along the bottom has play/pause, the time, a seek bar, mute and
- * full screen. The same on every browser and in a mobile app's web view.
+ * and a bar along the bottom has play/pause, the time, a seek bar, mute,
+ * picture in picture (where the browser has it) and full screen. The same on every browser and in a mobile app's web view.
  *
  * Render it inside a positioned box together with the video, and attach
  * `transport.setMediaElement` to the video's `ref`.
@@ -112,6 +165,8 @@ export function MediaControls({
   const video = transport.mediaElement as WebKitVideo | null;
   const muted = useMuted(video);
   const isFullscreen = useIsFullscreen(fullscreenTarget);
+  const inPip = useInPictureInPicture(video);
+  const canPip = canPictureInPicture(video);
   const playing = transport.isPlaying;
   const durationMs = transport.durationMs;
 
@@ -136,6 +191,21 @@ export function MediaControls({
       void fullscreenTarget.current.requestFullscreen?.()?.catch(() => {});
     } else {
       video?.webkitEnterFullscreen?.();
+    }
+  };
+
+  // Floats the video over other apps and pages (the standard API, else
+  // Safari's presentation mode on an iPhone); a second press brings it back.
+  const togglePictureInPicture = () => {
+    if (!video) return;
+    if (isInPictureInPicture(video)) {
+      if (document.pictureInPictureElement)
+        void document.exitPictureInPicture();
+      else video.webkitSetPresentationMode?.('inline');
+    } else if (document.pictureInPictureEnabled) {
+      void video.requestPictureInPicture().catch(() => {});
+    } else {
+      video.webkitSetPresentationMode?.('picture-in-picture');
     }
   };
 
@@ -215,6 +285,18 @@ export function MediaControls({
             <Volume2 className="h-5 w-5" aria-hidden="true" />
           )}
         </button>
+        {canPip && (
+          <button
+            type="button"
+            className={barButton}
+            aria-label={
+              inPip ? labels.exitPictureInPicture : labels.pictureInPicture
+            }
+            onClick={togglePictureInPicture}
+          >
+            <PictureInPicture2 className="h-5 w-5" aria-hidden="true" />
+          </button>
+        )}
         {canFullscreen && (
           <button
             type="button"

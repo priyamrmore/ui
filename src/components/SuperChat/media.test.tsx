@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -375,6 +376,52 @@ describe('SuperChat media view', () => {
     expect(
       screen.getAllByRole('button', { name: 'Open fullscreen' }).length
     ).toBeGreaterThan(0);
+  });
+
+  it('keeps a clip floating in picture in picture playing after Back, until its window closes', async () => {
+    mockNativePlayback();
+    const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause');
+    const user = userEvent.setup();
+    const { container } = render(
+      <SuperChat
+        conversation={videoConversation}
+        mediaFeedProps={{ autoPlay: false }}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: 'Play Second clip' }));
+    const view = () =>
+      container.querySelector('[data-slot="superchat-media-view"]');
+    const floated = view()!.querySelector<HTMLVideoElement>(
+      'video[src="/clip-two.webm"]'
+    )!;
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      configurable: true,
+      value: floated,
+    });
+    act(() => {
+      floated.dispatchEvent(new Event('enterpictureinpicture'));
+    });
+    pause.mockClear();
+    await user.click(
+      screen.getByRole('button', { name: 'Back to conversation' })
+    );
+    // The thread is back, the media view kept (hidden), the clip not paused.
+    expect(
+      screen.getByRole('button', { name: 'Play Second clip' })
+    ).toBeTruthy();
+    expect(view()).toHaveClass('hidden');
+    expect(floated.isConnected).toBe(true);
+    expect(pause.mock.contexts).not.toContain(floated);
+
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      configurable: true,
+      value: null,
+    });
+    act(() => {
+      floated.dispatchEvent(new Event('leavepictureinpicture'));
+    });
+    expect(view()).toBeNull();
+    pause.mockRestore();
   });
 
   it('changing an uncontrolled conversation returns to its thread without playing a new feed', async () => {

@@ -153,6 +153,77 @@ describe('MediaPlayer overlay controls', () => {
     ).webkitEnterFullscreen;
   });
 
+  describe('picture in picture', () => {
+    const setPipSupport = (enabled: boolean) =>
+      Object.defineProperty(document, 'pictureInPictureEnabled', {
+        configurable: true,
+        value: enabled,
+      });
+    const setPipElement = (element: Element | null) =>
+      Object.defineProperty(document, 'pictureInPictureElement', {
+        configurable: true,
+        value: element,
+      });
+    afterEach(() => {
+      setPipSupport(false);
+      setPipElement(null);
+      delete (
+        HTMLVideoElement.prototype as { requestPictureInPicture?: unknown }
+      ).requestPictureInPicture;
+      delete (
+        HTMLVideoElement.prototype as {
+          webkitSupportsPresentationMode?: unknown;
+        }
+      ).webkitSupportsPresentationMode;
+    });
+
+    it('offers no button where the browser has none', () => {
+      setPipSupport(false);
+      renderOverlay();
+      expect(
+        screen.queryByRole('button', { name: 'Picture in picture' })
+      ).toBeNull();
+    });
+
+    it('floats the video, and says so once it floats', () => {
+      setPipSupport(true);
+      const request = vi.fn(() =>
+        Promise.resolve({} as PictureInPictureWindow)
+      );
+      HTMLVideoElement.prototype.requestPictureInPicture = request;
+      const { video } = renderOverlay();
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Picture in picture' })
+      );
+      expect(request).toHaveBeenCalledOnce();
+      expect(request.mock.contexts[0]).toBe(video);
+      setPipElement(video);
+      act(() => {
+        video.dispatchEvent(new Event('enterpictureinpicture'));
+      });
+      expect(
+        screen.getByRole('button', { name: 'Exit picture in picture' })
+      ).toBeInTheDocument();
+    });
+
+    it("uses Safari's own mode on an iPhone", () => {
+      setPipSupport(false);
+      const proto = HTMLVideoElement.prototype as HTMLVideoElement & {
+        webkitSupportsPresentationMode?: (mode: string) => boolean;
+        webkitSetPresentationMode?: (mode: string) => void;
+      };
+      proto.webkitSupportsPresentationMode = () => true;
+      const setMode = vi.fn();
+      proto.webkitSetPresentationMode = setMode;
+      renderOverlay();
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Picture in picture' })
+      );
+      expect(setMode).toHaveBeenCalledWith('picture-in-picture');
+      delete proto.webkitSetPresentationMode;
+    });
+  });
+
   it('localizes every label', () => {
     render(
       <MediaPlayer

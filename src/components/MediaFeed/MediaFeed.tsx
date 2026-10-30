@@ -25,6 +25,8 @@ const defaultLabels: MediaFeedLabels = {
   seek: 'Seek',
   playerFullscreen: 'Full screen',
   exitPlayerFullscreen: 'Exit full screen',
+  pictureInPicture: 'Picture in picture',
+  exitPictureInPicture: 'Exit picture in picture',
   blockedAutoplay: 'Playback did not start. Press Play to try again.',
   mediaError: 'This media is unavailable.',
   openSource: 'Open source',

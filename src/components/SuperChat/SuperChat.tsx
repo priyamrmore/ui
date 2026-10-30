@@ -31,6 +31,7 @@ import { notifyComposerMigrationOnce } from '../ChatComposer/migration-notice';
 import { JumpToBottomButton } from '../ChatComposer/JumpToBottomButton';
 import { Button } from '../Button';
 import { MediaFeed } from '../MediaFeed';
+import { isInPictureInPicture, PIP_EVENTS } from '../MediaPlayer';
 import { getConversationMediaItems } from './media';
 import type { NewMessage } from '../Messaging/types';
 import { createMarkdownRenderer } from './render/createMarkdownRenderer';
@@ -292,6 +293,27 @@ export function SuperChat({
   }>();
   const playbackRequestCounter = React.useRef(0);
   const mediaFeedRef = React.useRef<HTMLDivElement>(null);
+  const mediaViewRef = React.useRef<HTMLDivElement>(null);
+  // A clip floating in picture in picture: the media view stays mounted
+  // (hidden) after Back, since a browser closes the floating window when its
+  // video leaves the page, and the viewer floated it to keep watching while
+  // they reply. Followed at the document, where the media view's own events
+  // reach even while it's hidden.
+  const [floating, setFloating] = React.useState(false);
+  React.useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const update = (event: Event) => {
+      const video = event.target as HTMLMediaElement;
+      if (mediaViewRef.current?.contains(video))
+        setFloating(isInPictureInPicture(video));
+    };
+    for (const name of PIP_EVENTS)
+      document.addEventListener(name, update, true);
+    return () => {
+      for (const name of PIP_EVENTS)
+        document.removeEventListener(name, update, true);
+    };
+  }, []);
   const backToConversationRef = React.useRef<HTMLButtonElement>(null);
   const focusMediaOnOpenRef = React.useRef(false);
   const focusThreadOnBackRef = React.useRef(false);
@@ -914,8 +936,9 @@ export function SuperChat({
         </h2>
       )}
 
-      {activeView === 'media' ? (
+      {(activeView === 'media' || floating) && (
         <div
+          ref={mediaViewRef}
           data-slot="superchat-media-view"
           className={cn(
             'relative flex min-h-0 flex-1 flex-col bg-black text-white',
@@ -923,7 +946,8 @@ export function SuperChat({
             // takes the whole screen, clear of the notch and home bar, so a
             // clip of either shape gets all of it. In a larger window it
             // stays in the conversation's place.
-            PHONE_FULLSCREEN
+            PHONE_FULLSCREEN,
+            activeView !== 'media' && 'hidden'
           )}
         >
           {/* Over the clip's top corner, so the clip keeps the whole view; the
@@ -975,7 +999,8 @@ export function SuperChat({
             className={cn('min-h-0 flex-1', mediaFeedProps?.className)}
           />
         </div>
-      ) : (
+      )}
+      {activeView !== 'media' && (
         <div
           data-slot="superchat-thread-viewport"
           className="relative flex min-h-0 flex-1 flex-col"

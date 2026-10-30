@@ -1,7 +1,11 @@
 import * as React from 'react';
 import { Play } from 'lucide-react';
 import { Button } from '../Button';
-import { MediaPlayer, type MediaPlayerState } from '../MediaPlayer';
+import {
+  isInPictureInPicture,
+  MediaPlayer,
+  type MediaPlayerState,
+} from '../MediaPlayer';
 import type { MediaFeedLabels, MediaFeedMedia } from './types';
 
 interface FeedMediaProps {
@@ -91,8 +95,12 @@ function NativeFeedMedia({
     }
   }, []);
 
+  // A clip floating in picture in picture plays on when its item stops being
+  // the one on screen (Back to the conversation, or scrolling on): the viewer
+  // floated it to keep watching.
   const pauseForOwnership = React.useCallback(
     (element: HTMLMediaElement | null) => {
+      if (isInPictureInPicture(element)) return;
       if (element && element === mediaElementRef.current && !element.paused)
         ownershipPause.current = true;
       element?.pause();
@@ -218,6 +226,8 @@ function NativeFeedMedia({
           seek: labels.seek,
           fullscreen: labels.playerFullscreen,
           exitFullscreen: labels.exitPlayerFullscreen,
+          pictureInPicture: labels.pictureInPicture,
+          exitPictureInPicture: labels.exitPictureInPicture,
         }}
         className="min-h-0 flex-1 [&_video]:h-full [&_video]:w-full"
       />
