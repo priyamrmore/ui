@@ -184,14 +184,14 @@ export function MediaControls({
         </button>
         <span
           data-slot="media-controls-time"
-          className="shrink-0 px-1 text-xs whitespace-nowrap tabular-nums @max-sm:me-auto"
+          className="shrink-0 px-1 text-xs whitespace-nowrap tabular-nums @max-md:me-auto"
         >
           {formatMediaTime(transport.currentTimeMs)} /{' '}
           {formatMediaTime(durationMs)}
         </span>
         <Slider
           // Taller to grab on a touch screen; the track itself stays thin.
-          className="mx-1 min-w-0 flex-1 @max-sm:order-first @max-sm:mx-2 @max-sm:basis-full pointer-coarse:[&_[data-slot=slider-track-wrapper]]:py-4"
+          className="mx-1 min-w-0 flex-1 @max-md:order-first @max-md:mx-2 @max-md:basis-full pointer-coarse:[&_[data-slot=slider-track-wrapper]]:py-4"
           trackClassName="bg-white/30"
           size="sm"
           min={0}
