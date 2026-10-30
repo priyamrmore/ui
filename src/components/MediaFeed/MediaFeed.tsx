@@ -376,6 +376,14 @@ function MediaFeedInner<T>(
     const title = ownTitle || labels.item(index + 1, items.length);
     const author = getAuthor?.(item);
     const caption = getCaption?.(item);
+    // Only words that add something: not empty, not the title over again.
+    const showCaption =
+      caption != null &&
+      caption !== '' &&
+      !(
+        typeof caption === 'string' &&
+        caption.trim() === (ownTitle ?? '').trim()
+      );
     const active =
       !loading &&
       !error &&
@@ -494,7 +502,7 @@ function MediaFeedInner<T>(
                 {ownTitle}
               </h3>
             )}
-            {caption != null && (
+            {showCaption && (
               <FeedCaption className={classNames.caption}>
                 {caption}
               </FeedCaption>

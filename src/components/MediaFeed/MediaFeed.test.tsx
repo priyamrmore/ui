@@ -469,6 +469,24 @@ describe('MediaFeed', () => {
     expect(within(second).getByText('Short')).toBeInTheDocument();
   });
 
+  it('leaves out a caption that is empty or repeats the title', () => {
+    renderFeed({
+      getCaption: (item) =>
+        item.id === 'first'
+          ? 'First update'
+          : item.id === 'second'
+            ? ''
+            : 'Said',
+    });
+    const caption = (name: string) =>
+      screen
+        .getByRole('article', { name })
+        .querySelector('[data-slot="caption"]')?.textContent;
+    expect(caption('First update')).toBeUndefined();
+    expect(caption('Second update')).toBeUndefined();
+    expect(caption('Third update')).toBe('Said');
+  });
+
   it('keeps a manual play control when autoplay is blocked', async () => {
     play.mockImplementation(() =>
       Promise.reject(
