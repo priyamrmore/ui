@@ -33,13 +33,59 @@ const defaultLabels: MediaFeedLabels = {
   position: (position, total) => `${position} / ${total}`,
 };
 
-/** Previous/Next on the dark feed: thumb-sized on a phone. */
-const NAV_BUTTON_CLASS =
-  'h-auto min-h-10 flex-1 py-2 text-white/80 hover:bg-white/10 hover:text-white sm:min-h-8 [@media(max-height:40rem)_and_(orientation:landscape)]:min-h-10 [@media(max-height:40rem)_and_(orientation:landscape)]:flex-none [&_[data-slot=button-label]]:whitespace-normal';
+/**
+ * The post's words under its title: two lines over the picture, and a tap
+ * shows the rest when they don't fit. Plain text only becomes a toggle; other
+ * content (it may hold its own links) stays clamped.
+ */
+function FeedCaption({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const ref = React.useRef<HTMLElement | null>(null);
+  const [overflows, setOverflows] = React.useState(false);
+  const [expanded, setExpanded] = React.useState(false);
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (el && !expanded) setOverflows(el.scrollHeight > el.clientHeight + 1);
+  }, [children, expanded]);
+  const classes = cn(
+    'm-0 block w-full text-start text-xs break-words text-white/80',
+    expanded ? 'max-h-32 overflow-y-auto' : 'line-clamp-2',
+    className
+  );
+  return typeof children === 'string' && (overflows || expanded) ? (
+    <button
+      ref={(node) => {
+        ref.current = node;
+      }}
+      type="button"
+      data-slot="caption"
+      aria-expanded={expanded}
+      onClick={() => setExpanded((open) => !open)}
+      className={cn('pointer-events-auto cursor-pointer', classes)}
+    >
+      {children}
+    </button>
+  ) : (
+    <p
+      ref={(node) => {
+        ref.current = node;
+      }}
+      data-slot="caption"
+      className={classes}
+    >
+      {children}
+    </p>
+  );
+}
 
-/** A nav label shown in a wide, tall feed; icons alone on a phone or a short screen. */
-const NAV_LABEL_CLASS =
-  'max-sm:sr-only [@media(max-height:40rem)_and_(orientation:landscape)]:sr-only';
+/** Previous/Next over the feed's edge: round, thumb-sized on a touch screen. */
+const NAV_BUTTON_CLASS =
+  'h-10 w-10 rounded-full bg-black/45 p-0 text-white/90 backdrop-blur-sm hover:bg-black/65 hover:text-white disabled:opacity-30 pointer-fine:h-9 pointer-fine:w-9';
 
 /**
  * A vertical, caller-owned media collection with one active playback surface.
@@ -364,13 +410,13 @@ function MediaFeedInner<T>(
         aria-posinset={index + 1}
         aria-setsize={items.length}
         tabIndex={id === activeId ? 0 : -1}
-        // A dark stage in every theme, as video surfaces are: the clip fills
-        // it edge to edge at its own shape, portrait or landscape.
+        // The clip is the whole item: it fills a dark stage (dark in every
+        // theme, as video surfaces are) at its own shape, upright or
+        // sideways, and who posted it and what they said float over its top on
+        // a gradient, clear of the player's controls along the bottom. Focus
+        // is an outline, drawn over the stage.
         className={cn(
-          // A short screen (a phone on its side) puts the details beside the
-          // clip, so it keeps the screen's height. Focus is an outline: it
-          // draws over the stage, where an inset ring hides behind it.
-          'flex h-full min-h-0 w-full snap-start snap-always flex-col overflow-hidden bg-neutral-950 text-white focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white/70 [@media(max-height:40rem)_and_(orientation:landscape)]:flex-row',
+          'relative h-full min-h-0 w-full snap-start snap-always overflow-hidden bg-black text-white focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white/70',
           immersive ? 'flex-1' : 'shrink-0',
           classNames.item
         )}
@@ -378,7 +424,7 @@ function MediaFeedInner<T>(
         <div
           data-slot="media"
           className={cn(
-            'flex min-h-0 flex-1 items-center justify-center bg-black',
+            'absolute inset-0 flex items-center justify-center bg-black',
             classNames.media
           )}
         >
@@ -407,87 +453,82 @@ function MediaFeedInner<T>(
             />
           )}
         </div>
+        {/* Over the picture, but only its own controls take a tap: the rest
+            of a tap lands on the player beneath (play/pause). */}
         <div
           data-slot="details"
           className={cn(
-            'flex max-h-[35%] shrink-0 flex-col gap-1 overflow-y-auto px-4 py-3 [@media(max-height:40rem)_and_(orientation:landscape)]:max-h-full [@media(max-height:40rem)_and_(orientation:landscape)]:w-[min(16rem,35%)] [@media(max-height:40rem)_and_(orientation:landscape)]:justify-end',
+            'pointer-events-none absolute inset-x-0 top-0 flex items-start gap-2 bg-gradient-to-b from-black/75 via-black/40 to-transparent px-3 pt-2 pb-10 [text-shadow:0_1px_2px_rgb(0_0_0/0.6)]',
             classNames.details
           )}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              {author && (
-                <div
-                  data-slot="author"
-                  className={cn(
-                    'mb-1 flex items-center gap-2',
-                    classNames.author
-                  )}
-                >
-                  <Avatar
-                    name={author.name}
-                    src={author.avatar}
-                    alt=""
-                    size="sm"
-                  />
-                  <span className="truncate text-sm font-medium">
-                    {author.name}
-                  </span>
-                </div>
-              )}
-              {ownTitle && (
-                <h3
-                  data-slot="title"
-                  className={cn(
-                    'm-0 text-sm font-semibold break-words',
-                    classNames.title
-                  )}
-                >
-                  {ownTitle}
-                </h3>
-              )}
-            </div>
-            {(renderActions || (allowFullscreen && !immersive)) && (
-              <div className="flex shrink-0 items-center gap-1">
-                {renderActions && (
-                  <div
-                    data-slot="actions"
-                    className={cn(
-                      'flex flex-wrap items-center justify-end gap-2',
-                      classNames.actions
-                    )}
-                  >
-                    {renderActions(item)}
-                  </div>
+          {author && (
+            <Avatar
+              name={author.name}
+              src={author.avatar}
+              alt=""
+              size="xs"
+              className="mt-0.5 shrink-0"
+            />
+          )}
+          <div className="min-w-0 flex-1 leading-5">
+            {author && (
+              <p
+                data-slot="author"
+                className={cn(
+                  'm-0 truncate text-xs font-medium text-white/85',
+                  classNames.author
                 )}
-                {allowFullscreen && !immersive && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="shrink-0 text-white/80 hover:bg-white/10 hover:text-white"
-                    aria-label={labels.fullscreen}
-                    title={labels.fullscreen}
-                    onClick={(event) => {
-                      fullscreenTriggerRef.current = event.currentTarget;
-                      select(id);
-                      setFullscreen(true);
-                    }}
-                  >
-                    <Maximize2 className="h-4 w-4" aria-hidden="true" />
-                  </Button>
+              >
+                {author.name}
+              </p>
+            )}
+            {ownTitle && (
+              <h3
+                data-slot="title"
+                className={cn(
+                  'm-0 truncate text-sm font-semibold',
+                  classNames.title
                 )}
-              </div>
+              >
+                {ownTitle}
+              </h3>
+            )}
+            {caption != null && (
+              <FeedCaption className={classNames.caption}>
+                {caption}
+              </FeedCaption>
             )}
           </div>
-          {caption != null && (
-            <div
-              data-slot="caption"
-              className={cn(
-                'line-clamp-3 text-sm break-words text-white/75',
-                classNames.caption
+          {(renderActions || (allowFullscreen && !immersive)) && (
+            <div className="pointer-events-auto -me-1 -mt-1 flex shrink-0 items-center gap-1">
+              {renderActions && (
+                <div
+                  data-slot="actions"
+                  className={cn(
+                    'flex flex-wrap items-center justify-end gap-2',
+                    classNames.actions
+                  )}
+                >
+                  {renderActions(item)}
+                </div>
               )}
-            >
-              {caption}
+              {allowFullscreen && !immersive && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 text-white/85 hover:bg-white/10 hover:text-white"
+                  aria-label={labels.fullscreen}
+                  title={labels.fullscreen}
+                  onClick={(event) => {
+                    fullscreenTriggerRef.current = event.currentTarget;
+                    select(id);
+                    setFullscreen(true);
+                  }}
+                >
+                  <Maximize2 className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -495,45 +536,45 @@ function MediaFeedInner<T>(
     );
   };
 
+  // Over the feed's end edge, stacked as the feed scrolls (swiping is the
+  // other way through), clear of the details along the top and the player's
+  // controls along the bottom.
   const controls = (
     <div
       data-slot="controls"
       className={cn(
-        // Beside the feed on a short screen, stacked as the feed scrolls.
-        'flex shrink-0 items-center justify-between gap-3 py-1 [@media(max-height:40rem)_and_(orientation:landscape)]:flex-col [@media(max-height:40rem)_and_(orientation:landscape)]:justify-center [@media(max-height:40rem)_and_(orientation:landscape)]:gap-1 [@media(max-height:40rem)_and_(orientation:landscape)]:px-1',
+        'pointer-events-none absolute end-2 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center gap-1.5',
         classNames.controls
       )}
     >
-      {/* Icons only on a phone, where swiping is the way through; the
-          labels still name them for assistive tech. */}
       <Button
         variant="ghost"
-        size="sm"
+        size="icon"
         aria-label={labels.previous}
-        className={NAV_BUTTON_CLASS}
+        title={labels.previous}
+        className={cn('pointer-events-auto', NAV_BUTTON_CLASS)}
         disabled={activeIndex <= 0}
         onClick={() => navigate(activeIndex - 1)}
-        leftIcon={<ChevronUp className="h-4 w-4" aria-hidden="true" />}
       >
-        <span className={NAV_LABEL_CLASS}>{labels.previous}</span>
+        <ChevronUp className="h-5 w-5" aria-hidden="true" />
       </Button>
       <span
         role="status"
         aria-live="polite"
-        className="shrink-0 text-sm whitespace-nowrap text-white/70"
+        className="rounded-full bg-black/45 px-1.5 py-0.5 text-[11px] whitespace-nowrap text-white/85 tabular-nums backdrop-blur-sm"
       >
         {labels.position(activeIndex + 1, items.length)}
       </span>
       <Button
         variant="ghost"
-        size="sm"
+        size="icon"
         aria-label={labels.next}
-        className={NAV_BUTTON_CLASS}
+        title={labels.next}
+        className={cn('pointer-events-auto', NAV_BUTTON_CLASS)}
         disabled={activeIndex >= items.length - 1}
         onClick={() => navigate(activeIndex + 1)}
-        rightIcon={<ChevronDown className="h-4 w-4" aria-hidden="true" />}
       >
-        <span className={NAV_LABEL_CLASS}>{labels.next}</span>
+        <ChevronDown className="h-5 w-5" aria-hidden="true" />
       </Button>
     </div>
   );
@@ -544,7 +585,7 @@ function MediaFeedInner<T>(
       data-slot="root"
       data-component="media-feed"
       className={cn(
-        'flex h-[min(48rem,80dvh)] min-h-0 w-full flex-col bg-neutral-950 text-white [@media(max-height:40rem)_and_(orientation:landscape)]:flex-row',
+        'relative flex h-[min(48rem,80dvh)] min-h-0 w-full flex-col bg-black text-white',
         classNames.root,
         className
       )}
@@ -626,7 +667,7 @@ function MediaFeedInner<T>(
           tabIndex={0}
           onKeyDown={handleKeyDown}
           className={cn(
-            'flex min-h-0 flex-1 flex-col px-2 pb-2 sm:px-4 [@media(max-height:40rem)_and_(orientation:landscape)]:flex-row',
+            'relative flex min-h-0 flex-1 flex-col px-2 pb-2 sm:px-4',
             classNames.fullscreen
           )}
         >

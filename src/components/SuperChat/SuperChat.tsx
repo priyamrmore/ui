@@ -30,7 +30,6 @@ import type { ComposerModelSelectorProps } from '../AI/ComposerModelSelector';
 import { notifyComposerMigrationOnce } from '../ChatComposer/migration-notice';
 import { JumpToBottomButton } from '../ChatComposer/JumpToBottomButton';
 import { Button } from '../Button';
-import { ButtonGroup } from '../ButtonGroup';
 import { MediaFeed } from '../MediaFeed';
 import { getConversationMediaItems } from './media';
 import type { NewMessage } from '../Messaging/types';
@@ -919,7 +918,7 @@ export function SuperChat({
         <div
           data-slot="superchat-media-view"
           className={cn(
-            'flex min-h-0 flex-1 flex-col bg-neutral-950 text-white',
+            'relative flex min-h-0 flex-1 flex-col bg-black text-white',
             // Mobile first: on a phone, upright or sideways, the media view
             // takes the whole screen, clear of the notch and home bar, so a
             // clip of either shape gets all of it. In a larger window it
@@ -927,31 +926,29 @@ export function SuperChat({
             PHONE_FULLSCREEN
           )}
         >
-          <div className="px-2 pt-1 sm:px-4 sm:pt-2">
-            <ButtonGroup className="justify-start">
-              <Button
-                ref={backToConversationRef}
-                variant="ghost"
-                size="sm"
-                className="min-h-10 text-white/90 hover:bg-white/10 hover:text-white sm:min-h-8"
-                leftIcon={
-                  <ArrowLeft
-                    className="size-4 rtl:rotate-180"
-                    aria-hidden="true"
-                  />
-                }
-                onClick={handleBackToConversation}
-              >
-                {labels.backToConversation}
-              </Button>
-            </ButtonGroup>
-          </div>
+          {/* Over the clip's top corner, so the clip keeps the whole view; the
+              feed's details start after it. */}
+          <Button
+            ref={backToConversationRef}
+            variant="ghost"
+            size="icon"
+            aria-label={labels.backToConversation}
+            title={labels.backToConversation}
+            className="absolute start-2 top-2 z-20 h-10 w-10 rounded-full bg-black/45 p-0 text-white backdrop-blur-sm hover:bg-black/65 hover:text-white focus-visible:ring-2 focus-visible:ring-white pointer-fine:h-9 pointer-fine:w-9"
+            onClick={handleBackToConversation}
+          >
+            <ArrowLeft className="size-5 rtl:rotate-180" aria-hidden="true" />
+          </Button>
           <MediaFeed
             {...mediaFeedProps}
             // The media view is already the full view (the whole screen on a
             // phone), and the player's own controls go fullscreen: no third,
             // immersive one unless the host asks for it.
             allowFullscreen={mediaFeedProps?.allowFullscreen ?? false}
+            classNames={{
+              ...mediaFeedProps?.classNames,
+              details: cn('ps-14', mediaFeedProps?.classNames?.details),
+            }}
             ref={mediaFeedRef}
             key={conversation.id}
             items={mediaItems}
