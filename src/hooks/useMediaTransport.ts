@@ -183,6 +183,7 @@ export function useMediaTransport(
       setDurationMs(toMs(element.duration));
       emitTime();
     };
+    const onDurationChange = () => setDurationMs(toMs(element.duration));
     const onTimeUpdateEvt = () => emitTime();
     const onPlay = () => setState('playing');
     const onPlaying = () => setState('playing');
@@ -205,6 +206,9 @@ export function useMediaTransport(
     element.addEventListener('loadstart', onLoadStart);
     element.addEventListener('canplay', onCanPlay);
     element.addEventListener('loadedmetadata', onLoadedMetadata);
+    // A recording that didn't know its length at first (a MediaRecorder WebM,
+    // a stream) reports it later.
+    element.addEventListener('durationchange', onDurationChange);
     element.addEventListener('timeupdate', onTimeUpdateEvt);
     element.addEventListener('play', onPlay);
     element.addEventListener('playing', onPlaying);
@@ -221,6 +225,7 @@ export function useMediaTransport(
       element.removeEventListener('loadstart', onLoadStart);
       element.removeEventListener('canplay', onCanPlay);
       element.removeEventListener('loadedmetadata', onLoadedMetadata);
+      element.removeEventListener('durationchange', onDurationChange);
       element.removeEventListener('timeupdate', onTimeUpdateEvt);
       element.removeEventListener('play', onPlay);
       element.removeEventListener('playing', onPlaying);

@@ -424,6 +424,50 @@ describe('SuperChat media view', () => {
     pause.mockRestore();
   });
 
+  it('lets the media view go once its floating clip has left with its conversation', async () => {
+    mockNativePlayback();
+    const user = userEvent.setup();
+    const { container, rerender } = render(
+      <SuperChat
+        conversation={videoConversation}
+        mediaFeedProps={{ autoPlay: false }}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: 'Play Second clip' }));
+    const view = () =>
+      container.querySelector('[data-slot="superchat-media-view"]');
+    const floated = view()!.querySelector<HTMLVideoElement>(
+      'video[src="/clip-two.webm"]'
+    )!;
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      configurable: true,
+      value: floated,
+    });
+    try {
+      act(() => {
+        floated.dispatchEvent(new Event('enterpictureinpicture'));
+      });
+      await user.click(
+        screen.getByRole('button', { name: 'Back to conversation' })
+      );
+      expect(view()).toHaveClass('hidden');
+      // Another conversation: its feed replaces the one the clip floated from,
+      // and the browser closed that window with it.
+      rerender(
+        <SuperChat
+          conversation={{ ...videoConversation, id: 'c2' }}
+          mediaFeedProps={{ autoPlay: false }}
+        />
+      );
+      await waitFor(() => expect(view()).toBeNull());
+    } finally {
+      Object.defineProperty(document, 'pictureInPictureElement', {
+        configurable: true,
+        value: null,
+      });
+    }
+  });
+
   it('changing an uncontrolled conversation returns to its thread without playing a new feed', async () => {
     const play = mockNativePlayback();
     const user = userEvent.setup();

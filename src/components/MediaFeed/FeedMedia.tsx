@@ -4,6 +4,7 @@ import { Button } from '../Button';
 import {
   isInPictureInPicture,
   MediaPlayer,
+  PIP_EVENTS,
   type MediaPlayerState,
 } from '../MediaPlayer';
 import type { MediaFeedLabels, MediaFeedMedia } from './types';
@@ -153,6 +154,21 @@ function NativeFeedMedia({
     tryPlay,
   ]);
 
+  // A clip left playing in picture in picture when its item stopped being the
+  // one on screen comes back with no controls (only the active item has
+  // them): pause it as it lands.
+  React.useEffect(() => {
+    const element = mediaElementRef.current;
+    if (!element) return;
+    const landed = () => {
+      if (!activeRef.current && !isInPictureInPicture(element)) element.pause();
+    };
+    for (const name of PIP_EVENTS) element.addEventListener(name, landed);
+    return () => {
+      for (const name of PIP_EVENTS) element.removeEventListener(name, landed);
+    };
+  }, [retryVersion]);
+
   React.useEffect(() => {
     if (
       !active ||
@@ -197,7 +213,17 @@ function NativeFeedMedia({
         aria-label={title}
         onStateChange={(next) => {
           setState(next);
-          if (next === 'playing') ownershipPause.current = false;
+          if (next === 'playing') {
+            ownershipPause.current = false;
+            // However it started — the player's own Play, a tap on the
+            // picture — the viewer wants it playing: it resumes when they
+            // come back to it, and a refused autoplay is no longer news.
+            setBlocked(false);
+            if (activeRef.current) {
+              wantsPlayback.current = true;
+              playbackPosition.playRequested = true;
+            }
+          }
           if (next === 'paused') {
             if (activeRef.current && !ownershipPause.current) {
               wantsPlayback.current = false;

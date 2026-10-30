@@ -50,10 +50,19 @@ function FeedCaption({
   const ref = React.useRef<HTMLElement | null>(null);
   const [overflows, setOverflows] = React.useState(false);
   const [expanded, setExpanded] = React.useState(false);
+  // Measured again whenever its box changes — a phone turned, the window
+  // resized, fonts arriving, the feed shown after being hidden — since that
+  // decides whether two lines are enough.
   React.useLayoutEffect(() => {
     const el = ref.current;
-    if (el && !expanded) setOverflows(el.scrollHeight > el.clientHeight + 1);
-  }, [children, expanded]);
+    if (!el || expanded) return;
+    const measure = () => setOverflows(el.scrollHeight > el.clientHeight + 1);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [children, expanded, overflows]);
   const classes = cn(
     'm-0 block w-full text-start text-xs break-words text-white/80',
     expanded ? 'max-h-32 overflow-y-auto' : 'line-clamp-2',

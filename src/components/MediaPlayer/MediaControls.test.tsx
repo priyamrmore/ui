@@ -226,6 +226,61 @@ describe('MediaPlayer overlay controls', () => {
     });
   });
 
+  it('enters full screen even when the page around it is already full screen', () => {
+    Object.defineProperty(document, 'fullscreenEnabled', {
+      configurable: true,
+      value: true,
+    });
+    Object.defineProperty(document, 'fullscreenElement', {
+      configurable: true,
+      value: document.body,
+    });
+    const request = vi.fn(() => Promise.resolve());
+    const exit = vi.fn(() => Promise.resolve());
+    const original = HTMLElement.prototype.requestFullscreen;
+    HTMLElement.prototype.requestFullscreen = request;
+    Object.defineProperty(document, 'exitFullscreen', {
+      configurable: true,
+      value: exit,
+    });
+    try {
+      renderOverlay();
+      fireEvent.click(screen.getByRole('button', { name: 'Full screen' }));
+      expect(request).toHaveBeenCalledOnce();
+      expect(exit).not.toHaveBeenCalled();
+    } finally {
+      HTMLElement.prototype.requestFullscreen = original;
+      Object.defineProperty(document, 'fullscreenElement', {
+        configurable: true,
+        value: null,
+      });
+      Object.defineProperty(document, 'fullscreenEnabled', {
+        configurable: true,
+        value: false,
+      });
+    }
+  });
+
+  it('lets the seek bar work once a recording reports its length late', () => {
+    const { video } = renderOverlay();
+    loadMetadata(video, Infinity);
+    expect(screen.getByRole('slider', { name: 'Seek' })).toHaveAttribute(
+      'aria-disabled',
+      'true'
+    );
+    Object.defineProperty(video, 'duration', {
+      configurable: true,
+      value: 12,
+    });
+    act(() => {
+      video.dispatchEvent(new Event('durationchange'));
+    });
+    expect(screen.getByRole('slider', { name: 'Seek' })).not.toHaveAttribute(
+      'aria-disabled'
+    );
+    expect(screen.getByText('0:00 / 0:12')).toBeInTheDocument();
+  });
+
   it('localizes every label', () => {
     render(
       <MediaPlayer

@@ -487,6 +487,39 @@ describe('MediaFeed', () => {
     expect(caption('Third update')).toBe('Said');
   });
 
+  it('lets a clip floating in picture in picture play on when the feed moves, and pauses it when it lands', async () => {
+    const { container } = renderFeed();
+    visibility([0.9, 0.1, 0]);
+    const clips = [...container.querySelectorAll('video')];
+    await waitFor(() => expect(clips[0].paused).toBe(false));
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      configurable: true,
+      value: clips[0],
+    });
+    try {
+      // The viewer scrolls on: the next clip plays, and the floating one with it.
+      visibility([0.1, 0.9, 0]);
+      await waitFor(() => expect(clips[1].paused).toBe(false));
+      expect(clips[0].paused).toBe(false);
+      // Its window closed: it's back in the feed, not the active item, with no
+      // controls of its own — so it stops.
+      Object.defineProperty(document, 'pictureInPictureElement', {
+        configurable: true,
+        value: null,
+      });
+      act(() => {
+        clips[0].dispatchEvent(new Event('leavepictureinpicture'));
+      });
+      expect(clips[0].paused).toBe(true);
+      expect(clips[1].paused).toBe(false);
+    } finally {
+      Object.defineProperty(document, 'pictureInPictureElement', {
+        configurable: true,
+        value: null,
+      });
+    }
+  });
+
   it('keeps a manual play control when autoplay is blocked', async () => {
     play.mockImplementation(() =>
       Promise.reject(

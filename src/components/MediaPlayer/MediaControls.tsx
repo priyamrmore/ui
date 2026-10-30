@@ -92,8 +92,9 @@ export function isInPictureInPicture(
 /** Whether this browser can float `video` in picture in picture. */
 function canPictureInPicture(video: WebKitVideo | null): boolean {
   if (!video || typeof document === 'undefined') return false;
+  if (video.disablePictureInPicture) return false;
   return (
-    (document.pictureInPictureEnabled && !video.disablePictureInPicture) ||
+    document.pictureInPictureEnabled ||
     !!video.webkitSupportsPresentationMode?.('picture-in-picture')
   );
 }
@@ -137,6 +138,8 @@ function useIsFullscreen(
       setFullscreen(
         !!target?.current && document.fullscreenElement === target.current
       );
+    // Controls that mount while their box is already full screen say so.
+    update();
     document.addEventListener('fullscreenchange', update);
     return () => document.removeEventListener('fullscreenchange', update);
   }, [target]);
@@ -166,7 +169,16 @@ export function MediaControls({
   const muted = useMuted(video);
   const isFullscreen = useIsFullscreen(fullscreenTarget);
   const inPip = useInPictureInPicture(video);
-  const canPip = canPictureInPicture(video);
+  // What this browser can do, read once mounted: the server knows nothing of
+  // it, and markup that differs from the server's breaks hydration.
+  const [support, setSupport] = React.useState({ box: false, pip: false });
+  React.useEffect(() => {
+    setSupport({
+      box: document.fullscreenEnabled && !!fullscreenTarget,
+      pip: canPictureInPicture(video),
+    });
+  }, [video, fullscreenTarget]);
+  const canPip = support.pip;
   const playing = transport.isPlaying;
   const durationMs = transport.durationMs;
 
@@ -179,15 +191,13 @@ export function MediaControls({
   const toggleMuted = () => {
     if (video) video.muted = !video.muted;
   };
-  const canFullscreenBox =
-    typeof document !== 'undefined' &&
-    document.fullscreenEnabled &&
-    !!fullscreenTarget;
-  const canFullscreen = canFullscreenBox || !!video?.webkitEnterFullscreen;
+  const canFullscreen = support.box || !!video?.webkitEnterFullscreen;
+  // Leaves only the full screen these controls entered: a page that is full
+  // screen itself (a kiosk, a presentation) stays so.
   const toggleFullscreen = () => {
-    if (document.fullscreenElement) {
-      void document.exitFullscreen?.();
-    } else if (canFullscreenBox && fullscreenTarget?.current) {
+    if (isFullscreen) {
+      void document.exitFullscreen?.()?.catch(() => {});
+    } else if (support.box && fullscreenTarget?.current) {
       void fullscreenTarget.current.requestFullscreen?.()?.catch(() => {});
     } else {
       video?.webkitEnterFullscreen?.();
@@ -200,7 +210,7 @@ export function MediaControls({
     if (!video) return;
     if (isInPictureInPicture(video)) {
       if (document.pictureInPictureElement)
-        void document.exitPictureInPicture();
+        void document.exitPictureInPicture().catch(() => {});
       else video.webkitSetPresentationMode?.('inline');
     } else if (document.pictureInPictureEnabled) {
       void video.requestPictureInPicture().catch(() => {});
@@ -266,7 +276,9 @@ export function MediaControls({
           size="sm"
           min={0}
           max={durationMs > 0 ? durationMs : 1}
-          step={100}
+          // An arrow key moves 2% of the clip: a few presses cross a short
+          // one, and a long one isn't hundreds of presses long.
+          step={Math.max(100, Math.round(durationMs / 50))}
           value={transport.currentTimeMs}
           onValueChange={transport.seekToMs}
           formatValue={formatMediaTime}

@@ -300,20 +300,30 @@ export function SuperChat({
   // they reply. Followed at the document, where the media view's own events
   // reach even while it's hidden.
   const [floating, setFloating] = React.useState(false);
+  // Read from the browser, not from which event came last: is a video in the
+  // media view floating right now? A floating video that leaves the page (a
+  // conversation change, a removed message) takes its window with it, and its
+  // own events no longer reach the document.
+  const checkFloating = React.useCallback(() => {
+    const view = mediaViewRef.current;
+    const floatingNow =
+      !!view &&
+      Array.from(view.querySelectorAll('video')).some(isInPictureInPicture);
+    setFloating(floatingNow);
+  }, []);
   React.useEffect(() => {
     if (typeof document === 'undefined') return;
-    const update = (event: Event) => {
-      const video = event.target as HTMLMediaElement;
-      if (mediaViewRef.current?.contains(video))
-        setFloating(isInPictureInPicture(video));
-    };
     for (const name of PIP_EVENTS)
-      document.addEventListener(name, update, true);
+      document.addEventListener(name, checkFloating, true);
     return () => {
       for (const name of PIP_EVENTS)
-        document.removeEventListener(name, update, true);
+        document.removeEventListener(name, checkFloating, true);
     };
-  }, []);
+  }, [checkFloating]);
+  // Whatever re-renders the panel may have taken the floating video away.
+  React.useEffect(() => {
+    if (floating) checkFloating();
+  });
   const backToConversationRef = React.useRef<HTMLButtonElement>(null);
   const focusMediaOnOpenRef = React.useRef(false);
   const focusThreadOnBackRef = React.useRef(false);
@@ -950,54 +960,60 @@ export function SuperChat({
             activeView !== 'media' && 'hidden'
           )}
         >
-          {/* Over the clip's top corner, so the clip keeps the whole view; the
+          {/* Inside the safe area (the padding above), so Back clears the
+              notch: an absolute child is placed from the padding edge. */}
+          <div className="relative flex min-h-0 flex-1 flex-col">
+            {/* Over the clip's top corner, so the clip keeps the whole view; the
               feed's details start after it. */}
-          <Button
-            ref={backToConversationRef}
-            variant="ghost"
-            size="icon"
-            aria-label={labels.backToConversation}
-            title={labels.backToConversation}
-            className="absolute start-2 top-2 z-20 h-10 w-10 rounded-full bg-black/45 p-0 text-white backdrop-blur-sm hover:bg-black/65 hover:text-white focus-visible:ring-2 focus-visible:ring-white pointer-fine:h-9 pointer-fine:w-9"
-            onClick={handleBackToConversation}
-          >
-            <ArrowLeft className="size-5 rtl:rotate-180" aria-hidden="true" />
-          </Button>
-          <MediaFeed
-            {...mediaFeedProps}
-            // The media view is already the full view (the whole screen on a
-            // phone), and the player's own controls go fullscreen: no third,
-            // immersive one unless the host asks for it.
-            allowFullscreen={mediaFeedProps?.allowFullscreen ?? false}
-            classNames={{
-              ...mediaFeedProps?.classNames,
-              details: cn('ps-14', mediaFeedProps?.classNames?.details),
-            }}
-            ref={mediaFeedRef}
-            key={conversation.id}
-            items={mediaItems}
-            getId={(item) => item.id}
-            getMedia={(item) => item.attachment}
-            getTitle={(item) => item.attachment.title ?? ''}
-            getCaption={(item) => item.attachment.caption ?? item.message.text}
-            getAuthor={(item) => ({
-              name: item.participant?.name ?? labels.unknownAuthor,
-              avatar: item.participant?.avatar,
-            })}
-            activeItemId={
-              mediaFeedProps?.activeItemId ??
-              (mediaSelection?.conversationId === conversation.id
-                ? mediaSelection.itemId
-                : undefined)
-            }
-            onActiveItemChange={handleMediaSelection}
-            playbackRequest={
-              manualPlaybackRequest?.conversationId === conversation.id
-                ? manualPlaybackRequest
-                : mediaFeedProps?.playbackRequest
-            }
-            className={cn('min-h-0 flex-1', mediaFeedProps?.className)}
-          />
+            <Button
+              ref={backToConversationRef}
+              variant="ghost"
+              size="icon"
+              aria-label={labels.backToConversation}
+              title={labels.backToConversation}
+              className="absolute start-2 top-2 z-20 h-10 w-10 rounded-full bg-black/45 p-0 text-white backdrop-blur-sm hover:bg-black/65 hover:text-white focus-visible:ring-2 focus-visible:ring-white pointer-fine:h-9 pointer-fine:w-9"
+              onClick={handleBackToConversation}
+            >
+              <ArrowLeft className="size-5 rtl:rotate-180" aria-hidden="true" />
+            </Button>
+            <MediaFeed
+              {...mediaFeedProps}
+              // The media view is already the full view (the whole screen on a
+              // phone), and the player's own controls go fullscreen: no third,
+              // immersive one unless the host asks for it.
+              allowFullscreen={mediaFeedProps?.allowFullscreen ?? false}
+              classNames={{
+                ...mediaFeedProps?.classNames,
+                details: cn('ps-14', mediaFeedProps?.classNames?.details),
+              }}
+              ref={mediaFeedRef}
+              key={conversation.id}
+              items={mediaItems}
+              getId={(item) => item.id}
+              getMedia={(item) => item.attachment}
+              getTitle={(item) => item.attachment.title ?? ''}
+              getCaption={(item) =>
+                item.attachment.caption ?? item.message.text
+              }
+              getAuthor={(item) => ({
+                name: item.participant?.name ?? labels.unknownAuthor,
+                avatar: item.participant?.avatar,
+              })}
+              activeItemId={
+                mediaFeedProps?.activeItemId ??
+                (mediaSelection?.conversationId === conversation.id
+                  ? mediaSelection.itemId
+                  : undefined)
+              }
+              onActiveItemChange={handleMediaSelection}
+              playbackRequest={
+                manualPlaybackRequest?.conversationId === conversation.id
+                  ? manualPlaybackRequest
+                  : mediaFeedProps?.playbackRequest
+              }
+              className={cn('min-h-0 flex-1', mediaFeedProps?.className)}
+            />
+          </div>
         </div>
       )}
       {activeView !== 'media' && (
