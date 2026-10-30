@@ -188,7 +188,9 @@ describe('MediaPlayer overlay controls', () => {
     it('floats the video, and says so once it floats', () => {
       setPipSupport(true);
       const request = vi.fn(() =>
-        Promise.resolve({} as PictureInPictureWindow)
+        Promise.resolve(
+          {} as Awaited<ReturnType<HTMLVideoElement['requestPictureInPicture']>>
+        )
       );
       HTMLVideoElement.prototype.requestPictureInPicture = request;
       const { video } = renderOverlay();
