@@ -143,7 +143,9 @@ export function MediaControls({
     <div
       data-slot="media-controls"
       className={cn(
-        'pointer-events-none absolute inset-0 flex flex-col justify-end text-white',
+        // A container: a narrow player (a portrait card) gives the seek bar a
+        // row of its own, so it's always long enough to drag.
+        '@container pointer-events-none absolute inset-0 flex flex-col justify-end text-white',
         className
       )}
     >
@@ -163,7 +165,7 @@ export function MediaControls({
       </div>
       <div
         data-slot="media-controls-bar"
-        className="pointer-events-auto relative flex items-center gap-1 bg-gradient-to-t from-black/75 via-black/40 to-transparent px-1 pt-6 pb-1 sm:px-2"
+        className="pointer-events-auto relative flex flex-wrap items-center gap-x-1 bg-gradient-to-t from-black/75 via-black/40 to-transparent px-1 pt-6 pb-1 sm:px-2"
       >
         <button
           type="button"
@@ -182,14 +184,14 @@ export function MediaControls({
         </button>
         <span
           data-slot="media-controls-time"
-          className="shrink-0 px-1 text-xs whitespace-nowrap tabular-nums"
+          className="shrink-0 px-1 text-xs whitespace-nowrap tabular-nums @max-sm:me-auto"
         >
           {formatMediaTime(transport.currentTimeMs)} /{' '}
           {formatMediaTime(durationMs)}
         </span>
         <Slider
           // Taller to grab on a touch screen; the track itself stays thin.
-          className="mx-1 min-w-0 flex-1 pointer-coarse:[&_[data-slot=slider-track-wrapper]]:py-4"
+          className="mx-1 min-w-0 flex-1 @max-sm:order-first @max-sm:mx-2 @max-sm:basis-full pointer-coarse:[&_[data-slot=slider-track-wrapper]]:py-4"
           trackClassName="bg-white/30"
           size="sm"
           min={0}
